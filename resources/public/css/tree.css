@@ -1,0 +1,18 @@
+.node, .placeholder{
+    width: 200px;
+    border: 1px solid #ccc;
+    padding: 5px 10px;
+    margin-bottom: 10px;
+}
+
+.children {
+    margin-left: 10px; 
+} 
+
+.hidden {
+    display: none;
+}
+
+.placeholder {
+    opacity: .5;
+}
