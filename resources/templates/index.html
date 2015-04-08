@@ -10,20 +10,12 @@
   <body>
     <div id="app"></div>
     {% if dev %}
-<<<<<<< HEAD
       <script src="//cdnjs.cloudflare.com/ajax/libs/react/0.12.2/react.js"></script>
-=======
-      <script src="//cdnjs.cloudflare.com/ajax/libs/react/0.11.2/react.js"></script>
->>>>>>> f57988d8b320f222cf2522d25800a404e222f72e
       {% script "js/out/goog/base.js" %}
       {% script "js/app.js" %}
       <script type="text/javascript">goog.require("nested_sortable.dev");</script>
     {% else %}
-<<<<<<< HEAD
       <script src="//cdnjs.cloudflare.com/ajax/libs/react/0.12.2/react.min.js"></script>
-=======
-      <script src="//cdnjs.cloudflare.com/ajax/libs/react/0.11.2/react.min.js"></script>
->>>>>>> f57988d8b320f222cf2522d25800a404e222f72e
       {% script "js/app.js" %}
     {% endif %}
   </body>

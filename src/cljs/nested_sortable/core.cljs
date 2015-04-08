@@ -5,7 +5,7 @@
               [goog.events :as events]
               [goog.history.EventType :as EventType]
               [nested-sortable.list :refer [sortable-list]]
-              [nested-sortable.tree :refer [sortable-tree]])
+              [nested-sortable.tree :refer [sortable-tree-root ]])
     (:import goog.History))
 
 ;; -------------------------
@@ -13,10 +13,20 @@
 
 (def tree-data (atom [{:name "Child 1"
                        :id 1
-                       :children []}
+                       :children [{:name "Child 1-1"
+                                   :id 11
+                                   :children []}
+                                  {:name "Child 1-2"
+                                   :id 12
+                                   :children []}]}
                       {:name "Child 2"
                        :id 2
-                       :children []}]))
+                       :children [{:name "Child 2-1"
+                                   :id 21
+                                   :children []}
+                                  {:name "Child 2-2"
+                                   :id 22
+                                   :children []}]}]))
 
 (def list-data (atom [{:name "One"
                        :id 1}
@@ -28,13 +38,13 @@
                        :id 4}]))
 
 (defn node-component [node]
-  [:div (:name @node)])
+  [:div.node (:name @node)])
 
 (defn home-page []
   [:div [:h2 "Nested-sortable"]
-   ;[sortable-list node-component list-data]
+   [sortable-list node-component list-data]
    [:hr]
-   [sortable-tree tree-data]
+   ;[sortable-tree-root tree-data]
    [:div [:a {:href "#/about"} "go to about page"]]])
 
 (defn about-page []
