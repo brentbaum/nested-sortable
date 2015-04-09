@@ -74,9 +74,6 @@
                                      (drag-over event index dragover-index)
                                      (.stopPropagation event))
                      :on-drag-end (fn [event]
-                                    (println "Putting " @dragged-node
-                                             " in " @coll
-                                             " at index " @dragover-index)
                                     (if-not (empty? @dragged-node)
                                       (drag-end event coll @dragged-node @dragover-index))
                                     (reset! dragover-index -2)
