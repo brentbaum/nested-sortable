@@ -41,10 +41,11 @@
                            (rest path)
                            value))))
 
-(defn remove-child [parent id]
-  (assoc parent :children
-         (into [] (filter #(not= (:id %) id)
-                          (:children parent)))))
+(defn remove-child [parent pos]
+  (let [children (:children parent)]
+    (assoc parent :children
+           (into [] (concat (subvec children 0 pos)
+                            (subvec children (inc pos) (count children)))))))
 
 (defn add-child [parent pos node]
   (let [children (:children parent)]
@@ -63,17 +64,33 @@
   (let [removed-node (get-node root path)]
     (update-children root path
                      (fn [parent]
-                       (remove-child parent (:id removed-node))))))
+                       (println (remove-child parent (last path)))
+                       (remove-child parent (last path))))))
 
 (defn add-node [root path node]
   (update-children root path
                    (fn [parent]
                      (add-child parent (last path) node))))
 
-(defn move-node [root old-path new-path]
-  (let [node (get-node root old-path)]
-    (-> (remove-node root old-path)
-        (add-node new-path node))))
+(defn update-path [add-path remove-path]
+  (let [i (dec (count add-path))]
+    (if (and (<= i (dec (count remove-path)))
+            (<= (get add-path i) (get remove-path i)))
+      (update-in remove-path [i] inc)
+      remove-path))
+)
+
+(defn move-node [root old-path add-path]
+  ;; If there's actually been movement (start != finish)
+  (println "Moving from" old-path " to " add-path)
+  (if (not= add-path
+            (update-in old-path [(dec (count old-path))] inc))
+    (let [node (get-node root old-path)
+          remove-path (update-path add-path old-path)]
+      (-> root
+          (add-node add-path node)
+          (remove-node remove-path)))
+    root))
 
 (defn placeholder [display path]
   [:div.placeholder {:class (visible-if (= path (:drag-path @state)))}
@@ -82,11 +99,15 @@
 (defn tree-node [node path display is-root?]
   [:div
    ^{:key (:id node)}
-   (node-attr node path)
-   [placeholder display path]
+   (if-not is-root?
+     (node-attr node path))
    [:div
-    (if-not is-root? [display node path])
+    (if-not is-root?
+      [:div
+       [placeholder display path]
+       [display node path]])
     [:div.children
+     
      (if-not (empty? (:children node))
        (for [[pos child] (map vector (range) (:children node))]
          [tree-node child (conj path pos) display false]))]]])

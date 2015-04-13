@@ -13,22 +13,26 @@
 (def tree-data (atom {:name "Root"
                       :id 0
                       :children [{:name "Child 1"
-                         :id 1
-                         :children [{:name "Child 1-1"
-                                     :id 11
-                                     :children []}
-                                    {:name "Child 2-1"
-                                     :id 21
-                                     :children []}
-                                    {:name "Child 1-2"
-                                     :id 12
-                                     :children []}]}
-                        {:name "Child 2"
-                         :id 2
-                         :children [
-                                    {:name "Child 2-2"
-                                     :id 22
-                                     :children []}]}]}))
+                                  :id 1
+                                  :children [{:name "Child 1-1"
+                                              :id 11
+                                              :children []}
+                                             {:name "Child 1-2"
+                                              :id 12
+                                              :children [{:name "Child 1-2-1"
+                                                          :id 121
+                                                          :children []}]}
+                                             {:name "Child 1-3"
+                                              :id 13
+                                              :children []}]}
+                                 {:name "Child 2"
+                                  :id 2
+                                  :children [{:name "Child 2-1"
+                                              :id 21
+                                              :children []}
+                                             {:name "Child 2-2"
+                                              :id 22
+                                              :children []}]}]}))
 
 (def list-data (atom [{:name "One"
                        :id 1}
