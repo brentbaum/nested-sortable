@@ -116,14 +116,15 @@
     (if-not is-root?
       [:div
        [display node path]
-       (if-not (:add-as-child @state)
-         [placeholder display path])])
+       ])
     [:div.children
      (if (:add-as-child @state)
        [placeholder display path])
      (if-not (empty? (:children node))
        (for [[pos child] (map vector (range) (:children node))]
-         [tree-node child (conj path pos) display false]))]]])
+         [tree-node child (conj path pos) display false]))]
+    (if-not (:add-as-child @state)
+         [placeholder display path])]])
 
 (defn tree [root-node]
   (let [display (fn [item path]
