@@ -115,8 +115,7 @@
    [:div
     (if-not is-root?
       [:div
-       [display node path]
-       ])
+       [display node path]])
     [:div.children
      (if (:add-as-child @state)
        [placeholder display path])
@@ -129,8 +128,7 @@
 (defn tree [root-node]
   (let [display (fn [item path]
                   [:div.node
-                   (:name item)
-                   (str " " path)])]
+                   (:name item)])]
     [:div.tree
      {:on-drag-over allow-drop
       :on-drag-enter allow-drop 
