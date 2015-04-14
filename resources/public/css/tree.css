@@ -1,4 +1,4 @@
-.tree {
+.no-select {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     -khtml-user-select: none;
@@ -6,6 +6,11 @@
     -ms-user-select: none;
     user-select: none;
     cursor: default;
+}
+
+.top-region {
+    height: 15px;
+    width: 100%;
 }
 
 .node {
