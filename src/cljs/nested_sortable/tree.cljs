@@ -5,27 +5,18 @@
 (defn visible-if [pred]
   (if pred "visible" "hidden"))
 
-(defn tree [node]
-  [:div
-   [:div.node (:name node)]
-   [:div.children
-    (for [child (:children node)]
-      [tree child])]])
-
 (def state (atom {:drag-path []
                   :start-path []
-                  :drag-node {}}))
+                  :drag-node {}
+                  :add-as-child false}))
 
-(defn node-attr [node path]
-  {:draggable true
-   :on-drag-start (fn [event]
-                    (swap! state assoc :drag-node node)
-                    (swap! state assoc :start-path path)
-                    (.stopPropagation event))
-   :on-drag-over (fn [event]
-                   (swap! state assoc :drag-path path)
-                   (.stopPropagation event))
-   :class (visible-if (not= (:id node) (get-in @state [:drag-node :id])))})
+(defn allow-drop [e]
+  (.preventDefault e)) 
+
+(defn add-as-child? [event node]
+  (let [event-x (.-clientX event)
+        element-x (-> event .-target .getBoundingClientRect .-left)]
+    (< 50 (- event-x element-x))))
 
 (defn get-node [node path]
   (if (empty? path)
@@ -59,12 +50,10 @@
     (update-node root
                  parent-path
                  (f parent))))
-
 (defn remove-node [root path]
   (let [removed-node (get-node root path)]
     (update-children root path
                      (fn [parent]
-                       (println (remove-child parent (last path)))
                        (remove-child parent (last path))))))
 
 (defn add-node [root path node]
@@ -75,14 +64,12 @@
 (defn update-path [add-path remove-path]
   (let [i (dec (count add-path))]
     (if (and (<= i (dec (count remove-path)))
-            (<= (get add-path i) (get remove-path i)))
+             (<= (get add-path i) (get remove-path i)))
       (update-in remove-path [i] inc)
-      remove-path))
-)
+      remove-path)))
 
 (defn move-node [root old-path add-path]
   ;; If there's actually been movement (start != finish)
-  (println "Moving from" old-path " to " add-path)
   (if (not= add-path
             (update-in old-path [(dec (count old-path))] inc))
     (let [node (get-node root old-path)
@@ -92,9 +79,33 @@
           (remove-node remove-path)))
     root))
 
+(defn path-below [root path]
+  (if path
+    (let [parent (get-node root (butlast path))]
+      (if (< (last path) (count (:children parent)))
+        (update-in path [(dec (count path))] inc)
+        (path-below root (butlast path))))
+    []))
+
 (defn placeholder [display path]
   [:div.placeholder {:class (visible-if (= path (:drag-path @state)))}
    [display (:drag-node @state)]])
+
+(defn node-attr [node path]
+  {:draggable true
+   :on-drag-start (fn [event]
+                    (.stopPropagation event)
+                    (swap! state assoc :drag-node node)
+                    (swap! state assoc :drag-path path)
+                    (swap! state assoc :start-path path))
+   :on-drag-over (fn [event]
+                   (.stopPropagation event)
+                   (.preventDefault event)
+                   (swap! state assoc :add-as-child (and (:children node)
+                                                         (add-as-child? event node)))
+                   (swap! state assoc :drag-path path))
+   :class (visible-if (not= (:id node)
+                            (get-in @state [:drag-node :id])))})
 
 (defn tree-node [node path display is-root?]
   [:div
@@ -104,10 +115,12 @@
    [:div
     (if-not is-root?
       [:div
-       [placeholder display path]
-       [display node path]])
+       [display node path]
+       (if-not (:add-as-child @state)
+         [placeholder display path])])
     [:div.children
-     
+     (if (:add-as-child @state)
+       [placeholder display path])
      (if-not (empty? (:children node))
        (for [[pos child] (map vector (range) (:children node))]
          [tree-node child (conj path pos) display false]))]]])
@@ -118,18 +131,24 @@
                    (:name item)
                    (str " " path)])]
     [:div.tree
-     {:on-drag-end (fn [event] 
-                     (.stopPropagation event)
-                     (reset! root-node
-                             (move-node @root-node
-                                        (:start-path @state)
-                                        (:drag-path @state)))
-                     (swap! state assoc
-                            :drag-path []
-                            :start-path []
-                            :drag-node {}))}
-     [:div
-      (str @state)]
+     {:on-drag-over allow-drop
+      :on-drag-enter allow-drop 
+      :on-drop (fn [event] 
+                 (println "Drop")
+                 (.preventDefault event)
+                 (.stopPropagation event)
+                 (let [{:keys [start-path drag-path add-as-child]} @state]
+                   (reset! root-node
+                           (move-node @root-node
+                                      start-path
+                                      (if add-as-child
+                                        (conj drag-path 0)
+                                        (update-in drag-path [(dec (count drag-path))] inc)))))
+                 (swap! state assoc
+                        :drag-path []
+                        :start-path []
+                        :drag-node {}))} 
+     [:div (str @state)]
      [tree-node @root-node [] display true]]))
 
 (enable-console-print!)
