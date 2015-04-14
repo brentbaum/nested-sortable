@@ -10,6 +10,12 @@
                   :drag-node {}
                   :add-as-child false}))
 
+(def mouse (atom {:pos {:x 0
+                        :y 0}
+                  :dragging? false
+                  :down? false
+                  :in-tree? false}))
+
 (defn allow-drop [e]
   (.preventDefault e)) 
 
@@ -91,63 +97,101 @@
   [:div.placeholder {:class (visible-if (= path (:drag-path @state)))}
    [display (:drag-node @state)]])
 
-(defn node-attr [node path]
-  {:draggable true
-   :on-drag-start (fn [event]
+(defn node-attr [node path is-root?]
+  {:on-mouse-down (fn [event]
                     (.stopPropagation event)
-                    (swap! state assoc :drag-node node)
-                    (swap! state assoc :drag-path path)
-                    (swap! state assoc :start-path path))
-   :on-drag-over (fn [event]
-                   (.stopPropagation event)
-                   (.preventDefault event)
-                   (swap! state assoc :add-as-child (and (:children node)
-                                                         (add-as-child? event node)))
-                   (swap! state assoc :drag-path path))
-   :class (visible-if (not= (:id node)
-                            (get-in @state [:drag-node :id])))})
+                    (swap! state assoc
+                           :drag-node node
+                           :drag-path path
+                           :start-path path)
+                    (swap! mouse assoc
+                           :dragging? true
+                           :in-tree? true
+                           :pos {:x (+ 20 (.-clientX event))
+                                 :y (.-clientY event)}))
+   :on-mouse-over (fn [event]
+                    (.stopPropagation event)
+                    (.preventDefault event)
+                    (if (and (:in-tree? @mouse) (:dragging? @mouse))
+                      (swap! state assoc
+                             :add-as-child (and (:children node)
+                                                (not= (-> @state :drag-node :id)
+                                                      (:id node))
+                                                (add-as-child? event node))
+                             :drag-path path)))
+   })
+
+(defn end-drag [root-node]
+  (let [{:keys [start-path drag-path add-as-child]} @state]
+    (reset! root-node
+            (move-node @root-node
+                       start-path
+                       (if add-as-child
+                         (conj drag-path 0)
+                         (update-in drag-path [(dec (count drag-path))] inc))))
+    (swap! state assoc
+           :drag-path []
+           :start-path []
+           :drag-node {})
+    (swap! mouse assoc
+           :dragging? false
+           :in-tree? false)))
 
 (defn tree-node [node path display is-root?]
   [:div
    ^{:key (:id node)}
-   (if-not is-root?
-     (node-attr node path))
+   (node-attr node path is-root?)
    [:div
     (if-not is-root?
       [:div
+       {:class (visible-if (not= (:id node)
+                                 (get-in @state [:drag-node :id])))}
        [display node path]])
     [:div.children
-     (if (:add-as-child @state)
+     {:class (visible-if (not= (:id node)
+                               (get-in @state [:drag-node :id])))}
+     (if (and (not is-root?) (:add-as-child @state))
        [placeholder display path])
      (if-not (empty? (:children node))
        (for [[pos child] (map vector (range) (:children node))]
          [tree-node child (conj path pos) display false]))]
-    (if-not (:add-as-child @state)
-         [placeholder display path])]])
+    (if-not (or is-root? (:add-as-child @state))
+      [placeholder display path])]])
 
-(defn tree [root-node]
-  (let [display (fn [item path]
-                  [:div.node
-                   (:name item)])]
-    [:div.tree
-     {:on-drag-over allow-drop
-      :on-drag-enter allow-drop 
-      :on-drop (fn [event] 
-                 (println "Drop")
-                 (.preventDefault event)
-                 (.stopPropagation event)
-                 (let [{:keys [start-path drag-path add-as-child]} @state]
-                   (reset! root-node
-                           (move-node @root-node
-                                      start-path
-                                      (if add-as-child
-                                        (conj drag-path 0)
-                                        (update-in drag-path [(dec (count drag-path))] inc)))))
-                 (swap! state assoc
-                        :drag-path []
-                        :start-path []
-                        :drag-node {}))} 
-     [:div (str @state)]
-     [tree-node @root-node [] display true]]))
+(defn tree [root-node display]
+  (track-mouse-state root-node)
+  [:div.tree
+   {
+    :on-mouse-move (fn [event]
+                     (if (:dragging? @mouse)
+                       (swap! mouse assoc :pos {:x (+ 20 (.-clientX event))
+                                                :y (- (.-clientY event) 20)})))
+    :on-mouse-enter (fn [event]
+                      (if (:down? @mouse)
+                        (swap! mouse assoc :in-tree? true)
+                        (end-drag root-node)))
+
+    :on-mouse-leave (fn [event]
+                      (if (:dragging? @mouse)
+                        (do (swap! mouse assoc :in-tree? false)
+                            (swap! state (fn [s]
+                                           (assoc s
+                                             :drag-path (:start-path s)
+                                             :add-as-child false))))))} 
+   [:div.drag-ghost
+    {:style {:top (-> @mouse :pos :y)
+             :left (-> @mouse :pos :x)}}
+    (if (and (:in-tree? @mouse) (:dragging? @mouse))
+      [display (:drag-node @state) (:drag-path @state) false])]
+   [:div (str @state) "   " (str @mouse)]
+   [tree-node @root-node [] display true]])
+
+(defn track-mouse-state [root-node]
+  (aset js/document "onmousedown" (fn [] (swap! mouse assoc :down? true)))
+  (aset js/document "onmouseup" (fn [event]
+                                  (.preventDefault event)
+                                  (if (:dragging? @mouse)
+                                    (end-drag root-node))
+                                  (swap! mouse assoc :down? false))))
 
 (enable-console-print!)

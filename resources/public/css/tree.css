@@ -1,3 +1,13 @@
+.tree {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    cursor: default;
+}
+
 .node {
     min-width: 200px; 
     border: 1px solid #ccc;
@@ -15,4 +25,9 @@
 
 .placeholder {
     opacity: .5;
+}
+
+.drag-ghost {
+    opacity: .5;
+    position: fixed;
 }

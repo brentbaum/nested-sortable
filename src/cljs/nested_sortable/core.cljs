@@ -43,13 +43,13 @@
                       {:name "Four"
                        :id 4}]))
 
-(defn node-component [node]
-  [:div.node (:name @node)])
+(defn display [node]
+  [:div.node (:name node)])
 
 (defn home-page []
   [:div [:h2 "Nested-sortable"]
    [:hr]
-   [tree tree-data]
+   [tree tree-data display]
    [:div [:a {:href "#/about"} "go to about page"]]])
 
 (defn about-page []
