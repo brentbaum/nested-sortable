@@ -113,9 +113,6 @@
                                                 (add-as-child? event node))
                              :drag-path path)))})
 
-(defn remove-click [node path]
-  (fn [] (println "Remove" node path)))
-
 (defn mouse-down [node path]
   (fn [event]
     (.stopPropagation event)
@@ -158,7 +155,7 @@
    (if (and (:in-tree? @mouse) (:dragging? @mouse))
      [display (:drag-node @state) (:drag-path @state)])])
 
-(defn attach-node-attr [block node path]
+(defn attach-node-attr [block node path root-node]
   (if (and (vector? block)
            (map? (second block)))
     (assoc block 1
@@ -166,15 +163,18 @@
                (#(if (:drag-grip %)
                    (merge % {:on-mouse-down (mouse-down node path)}) %))
                (#(if (:remove-click %)
-                   (merge % {:on-click (remove-click node path)}) %))))
+                   (merge % {:on-click (fn []
+                                         (reset! root-node
+                                                 (remove-node @root-node path)))})
+                   %))))
     block))
 
-(defn set-attrs [block node path]
+(defn set-attrs [block node path root-node]
   (if (vector? block)
     (into []
           (map #(-> %
-                    (attach-node-attr node path)
-                    (set-attrs node path))
+                    (attach-node-attr node path root-node)
+                    (set-attrs node path root-node))
                block))
     block))
 
@@ -192,7 +192,7 @@
                                   (swap! mouse assoc :down? false))))
 
 
-(defn tree-node [node path display is-root?]
+(defn tree-node [node path display root-node is-root?]
   [:div
    ^{:key (:id node)}
    (node-attr node path)
@@ -201,8 +201,8 @@
       [:div
        {:class (visible-if (not= (:id node)
                                  (get-in @state [:drag-node :id])))}
-       (let [b (-> (display node path) (set-attrs node path))]
-         b)])
+       (-> (display node path)
+           (set-attrs node path root-node))])
     [:div.children
      {:class (visible-if (not= (:id node)
                                (get-in @state [:drag-node :id])))}
@@ -211,7 +211,7 @@
        [placeholder display path])
      (if-not (empty? (:children node))
        (for [[pos child] (map vector (range) (:children node))]
-         [tree-node child (conj path pos) display false]))]
+         [tree-node child (conj path pos) display root-node false]))]
     (if-not (or is-root? (:add-as-child @state))
       [placeholder display path])]])
 
@@ -244,6 +244,6 @@
                                                 :drag-path (:start-path s)
                                                 :add-as-child false))))))} 
       [drag-ghost display]
-      [tree-node @root-node [] display true]]]))
+      [tree-node @root-node [] display root-node true]]]))
 
 (enable-console-print!)
