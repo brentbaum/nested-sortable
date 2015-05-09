@@ -99,7 +99,7 @@
 
 (defn placeholder [display path]
   [:div.placeholder {:class (visible-if (= path (:drag-path @state)))}
-   [display (:drag-node @state) path]])
+   [wrap-display display (:drag-node @state) path]])
 
 (defn node-attr [node path]
   {:on-mouse-over (fn [event]
@@ -153,7 +153,7 @@
    {:style {:top (-> @mouse :pos :y)
             :left (-> @mouse :pos :x)}}
    (if (and (:in-tree? @mouse) (:dragging? @mouse))
-     [display (:drag-node @state) (:drag-path @state)])])
+     [wrap-display display (:drag-node @state) (:drag-path @state)])])
 
 (defn attach-node-attr [block node path root-node]
   (if (and (vector? block)
@@ -162,11 +162,8 @@
            (-> (second block)
                (#(if (:drag-grip %)
                    (merge % {:on-mouse-down (mouse-down node path)}) %))
-               (#(if (:remove-click %)
-                   (merge % {:on-click (fn []
-                                         (reset! root-node
-                                                 (remove-node @root-node path)))})
-                   %))))
+               ;; Any other attributes we want to add will go here
+               ))
     block))
 
 (defn set-attrs [block node path root-node]
@@ -191,6 +188,10 @@
                                       (println (count-tree @root-node))) 
                                   (swap! mouse assoc :down? false))))
 
+(defn wrap-display [display node path root]
+  (display (r/wrap node
+                   (fn [val] (reset! root (update-node @root path val))))
+           path))
 
 (defn tree-node [node path display root-node is-root?]
   [:div
@@ -201,7 +202,7 @@
       [:div
        {:class (visible-if (not= (:id node)
                                  (get-in @state [:drag-node :id])))}
-       (-> (display node path)
+       (-> (wrap-display display node path root-node)
            (set-attrs node path root-node))])
     [:div.children
      {:class (visible-if (not= (:id node)

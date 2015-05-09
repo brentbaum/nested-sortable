@@ -4,7 +4,7 @@
               [secretary.core :as secretary :include-macros true]
               [goog.events :as events]
               [goog.history.EventType :as EventType]
-              [nested-sortable.tree :refer [tree]])
+              [nested-sortable.tree :refer [tree remove-node update-node add-node]])
     (:import goog.History))
 
 ;; -------------------------
@@ -34,20 +34,19 @@
                                               :id 22
                                               :children []}]}]}))
 
-(def list-data (atom [{:name "One"
-                       :id 1}
-                      {:name "Two"
-                       :id 2}
-                      {:name "Three"
-                       :id 3}
-                      {:name "Four"
-                       :id 4}]))
+(defn atom-input [value k]
+  [:input {:type "text"
+           :value (get @value k)
+           :on-change #(swap! value assoc k (-> % .-target .-value))}])
 
 (defn display [node path]
   [:div.node {}
    [:span.grip {:drag-grip true}]
-   (:name node)
-   [:span.remove {:remove-click true} "x"]])
+   [atom-input node :name]
+   [:span.remove {:on-click
+                  (fn [] (reset! tree-data 
+                                 (remove-node @tree-data path)))}
+    "x"]])
 
 (defn home-page []
   [:div [:h2 "Nested-sortable"]
