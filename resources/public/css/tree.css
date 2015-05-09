@@ -36,6 +36,22 @@
     opacity: .5;
     position: fixed;
 }
+
+.remove {
+    float: right;
+    margin-right: 10px;
+    border: 1px solid red;
+    color: white;
+    background: #e74c3c;
+    padding: 3px;
+    line-height: 1em;
+    cursor: pointer;
+}
+
+.remove:hover {
+    background: #c0392b;
+}
+
 .grip {
     cursor: pointer;
     background: #f1f1f2;

@@ -44,11 +44,10 @@
                        :id 4}]))
 
 (defn display [node path]
-  [:div.node
+  [:div.node {}
    [:span.grip {:drag-grip true}]
    (:name node)
-   [:span.remove {:on-click #(println path)}
-    "x"]])
+   [:span.remove {:remove-click true} "x"]])
 
 (defn home-page []
   [:div [:h2 "Nested-sortable"]
