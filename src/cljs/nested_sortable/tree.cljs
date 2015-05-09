@@ -30,6 +30,10 @@
     (< (- event-y top)
        10)))
 
+(defn count-tree [node]
+  (if node
+    (+ 1 (reduce #(+ %1 (count-tree %2)) 0 (:children node)))))
+
 (defn get-node [node path]
   (if (empty? path)
     node
@@ -82,8 +86,9 @@
 
 (defn move-node [root old-path add-path]
   ;; If there's actually been movement (start != finish)
-  (if (not= add-path
-            (update-in old-path [(dec (count old-path))] inc))
+  (if (and (< 0 (count old-path))
+           (not= add-path 
+                 (update-in old-path [(dec (count old-path))] inc)))
     (let [node (get-node root old-path)
           remove-path (update-path add-path old-path)]
       (-> root
@@ -93,9 +98,20 @@
 
 (defn placeholder [display path]
   [:div.placeholder {:class (visible-if (= path (:drag-path @state)))}
-   [display (:drag-node @state)]])
+   [display (:drag-node @state) path]])
 
-(defn node-attr [node path is-root?]
+(defn node-attr [node path]
+  {:on-mouse-over (fn [event]
+                    (.stopPropagation event)
+                    (.preventDefault event)
+                    (if (and (:in-tree? @mouse) (:dragging? @mouse))
+                      (swap! state assoc
+                             :add-as-child (and (:children node)
+                                                (not= (-> @state :drag-node :id)
+                                                      (:id node))
+                                                (add-as-child? event node))
+                             :drag-path path)))})
+(defn mouse-down-attr [node path]
   {:on-mouse-down (fn [event]
                     (.stopPropagation event)
                     (swap! state assoc
@@ -109,40 +125,39 @@
                                  :y (.-clientY event)})
                     ;; Make the rest of the document unselectable
                     (-> js/document .-documentElement .-classList
-                                            (.add "no-select")))
-   :on-mouse-over (fn [event]
-                    (.stopPropagation event)
-                    (.preventDefault event)
-                    (if (and (:in-tree? @mouse) (:dragging? @mouse))
-                      (swap! state assoc
-                             :add-as-child (and (:children node)
-                                                (not= (-> @state :drag-node :id)
-                                                      (:id node))
-                                                (add-as-child? event node))
-                             :drag-path path)))})
-
+                        (.add "no-select")))})
 (defn end-drag [root-node]
   (let [{:keys [start-path drag-path add-as-child]} @state]
-    (reset! root-node
-            (move-node @root-node
-                       start-path
-                       (if add-as-child
-                         (conj drag-path 0)
-                         (update-in drag-path [(dec (count drag-path))] inc))))
-    (swap! state assoc
-           :drag-path []
-           :start-path []
-           :drag-node {})
-    (swap! mouse assoc
-           :dragging? false
-           :in-tree? false)))
+    (if (not= drag-path [])
+      (do
+        (reset! root-node
+                (move-node @root-node
+                           start-path
+                           (if (and add-as-child
+                                    (< 0 (count drag-path)))
+                             (conj drag-path 0)
+                             (update-in drag-path [(dec (count drag-path))] inc)))))
+      (swap! state assoc
+             :drag-path []
+             :start-path []
+             :drag-node {})
+      (swap! mouse assoc
+             :dragging? false
+             :in-tree? false))))
 
 (defn drag-ghost [display]
   [:div.drag-ghost
    {:style {:top (-> @mouse :pos :y)
             :left (-> @mouse :pos :x)}}
    (if (and (:in-tree? @mouse) (:dragging? @mouse))
-     [display (:drag-node @state) (:drag-path @state) false])])
+     [display (:drag-node @state) (:drag-path @state)])])
+
+(defn attach-drag [block node path]
+  (if (vector? block)
+    (if (and (map? (second block)) (:drag-grip (second block)))
+      (assoc block 1 (merge (second block) (mouse-down-attr node path)))
+      (into [] (map #(attach-drag % node path) block)))
+    block))
 
 (defn tree-node [node path display is-root?]
   [:div
@@ -153,7 +168,7 @@
       [:div
        {:class (visible-if (not= (:id node)
                                  (get-in @state [:drag-node :id])))}
-       [display node path]])
+       (-> (display node path) (attach-drag node path))])
     [:div.children
      {:class (visible-if (not= (:id node)
                                (get-in @state [:drag-node :id])))}
@@ -170,13 +185,12 @@
   (track-mouse-state root-node)
   (fn [root-node display]
     [:div.tree-container
-     [:div (str @state) "   " (str @mouse)]
      [:div.top-region
       {:on-mouse-move
-       (fn [] (println "top") (if (:dragging? @mouse)
-                   (swap! state assoc
-                          :add-as-child false
-                          :drag-path [-1])))}]
+       (fn [] (if (:dragging? @mouse)
+                (swap! state assoc
+                       :add-as-child false
+                       :drag-path [-1])))}]
      [:div.tree.no-select
       {:on-mouse-move (fn [event]
                         (if (:dragging? @mouse)
@@ -207,6 +221,7 @@
                                   (if (:dragging? @mouse)
                                     (do 
                                       (end-drag root-node)))
+                                  (println (count-tree @root-node)) 
                                   (swap! mouse assoc :down? false))))
 
 (enable-console-print!)

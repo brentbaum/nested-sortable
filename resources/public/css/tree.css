@@ -36,3 +36,10 @@
     opacity: .5;
     position: fixed;
 }
+.grip {
+    cursor: pointer;
+    background: #f1f1f2;
+    width: 15px;
+    margin: 5px;
+    padding: 3px 6px;
+}

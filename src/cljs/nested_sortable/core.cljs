@@ -43,18 +43,18 @@
                       {:name "Four"
                        :id 4}]))
 
-(defn display [node]
-  [:div.node (:name node)])
+(defn display [node path]
+  [:div.node
+   [:span.grip {:drag-grip true}]
+   (:name node)
+   [:span.remove {:on-click #(println path)}
+    "x"]])
 
 (defn home-page []
   [:div [:h2 "Nested-sortable"]
    [:hr]
    [tree tree-data display]
    [:div [:a {:href "#/about"} "go to about page"]]])
-
-(defn about-page []
-  [:div [:h2 "About nested-sortable"]
-   [:div [:a {:href "#/"} "go to the home page"]]])
 
 (defn current-page []
   [:div [(session/get :current-page)]])
@@ -65,9 +65,6 @@
 
 (secretary/defroute "/" []
   (session/put! :current-page home-page))
-
-(secretary/defroute "/about" []
-  (session/put! :current-page about-page))
 
 ;; -------------------------
 ;; Initialize app
